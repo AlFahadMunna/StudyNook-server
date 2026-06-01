@@ -147,6 +147,29 @@ async function run() {
       }
     });
 
+    // featured rooms
+
+    app.get("/featured-rooms", async (req, res) => {
+      try {
+        const result = await roomsCollection
+          .find()
+          .sort({ createdAt: -1 })
+          .limit(6)
+          .toArray();
+
+        return res.status(200).json({
+          success: true,
+          message: "Featured rooms fetched successfully",
+          data: result,
+        });
+      } catch (error) {
+        return res.status(500).json({
+          success: false,
+          message: "Internal Server Error",
+        });
+      }
+    });
+
     // await client.db("admin").command({ ping: 1 });
     console.log("Connected to MongoDB!");
   } finally {
