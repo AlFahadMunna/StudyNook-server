@@ -48,6 +48,40 @@ async function run() {
     const bookingCollection = db.collection("booking");
     const userCollection = db.collection("user");
 
+    // create room
+
+    app.post("/rooms", async (req, res) => {
+      try {
+        const body = req.body;
+
+        if (Object.keys(body).length === 0) {
+          return res.status(400).json({
+            success: false,
+            message: "Provide valid data",
+          });
+        }
+
+        const newRoom = {
+          ...body,
+          bookingCount: 0,
+          createdAt: new Date(),
+        };
+
+        const result = await roomsCollection.insertOne(newRoom);
+
+        return res.status(201).json({
+          success: true,
+          message: "Room created successfully",
+          data: result,
+        });
+      } catch (error) {
+        return res.status(500).json({
+          success: false,
+          message: "Internal Server Error",
+        });
+      }
+    });
+
     // await client.db("admin").command({ ping: 1 });
     console.log("Connected to MongoDB!");
   } finally {
