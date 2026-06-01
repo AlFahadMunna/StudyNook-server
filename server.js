@@ -296,6 +296,121 @@ async function run() {
       }
     });
 
+    // create booking
+
+    app.post("/book-room", verifyToken, async (req, res) => {
+      try {
+        const body = req.body;
+
+        const start = Number(body.start);
+
+        const end = Number(body.end);
+
+        // date validation
+
+        const today = new Date();
+
+        today.setHours(0, 0, 0, 0);
+
+        const bookingDate = new Date(body.date);
+
+        if (bookingDate < today) {
+          return res.status(400).json({
+            success: false,
+            message: "Select valid date",
+          });
+        }
+
+        // time validation
+
+        if (end <= start) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid booking time",
+          });
+        }
+
+        // conflict check
+
+        const conflictQuery = {
+          roomId: body.roomId,
+          date: body.date,
+          status: "confirmed",
+
+          $or: [
+            {
+              start: { $lt: end },
+              end: { $gt: start },
+            },
+          ],
+        };
+
+        if (body.bookedBy !== req.user.id) {
+          return res.status(403).json({
+            success: false,
+            message: "Forbidden: User ID mismatch",
+          });
+        }
+        const existingBooking = await bookingCollection
+          .find(conflictQuery)
+          .toArray();
+
+        if (existingBooking.length > 0) {
+          return res.status(409).json({
+            success: false,
+            message: "This slot already booked",
+          });
+        }
+
+        const newBooking = {
+          ...body,
+          start,
+          end,
+          status: "confirmed",
+          createdAt: new Date(),
+        };
+
+        const result = await bookingCollection.insertOne(newBooking);
+
+        // push booking id
+
+        await userCollection.updateOne(
+          {
+            _id: new ObjectId(body.bookedBy),
+          },
+          {
+            $push: {
+              bookings: result.insertedId,
+            },
+          },
+        );
+
+        // increase booking count
+
+        await roomsCollection.updateOne(
+          {
+            _id: new ObjectId(body.roomId),
+          },
+          {
+            $inc: {
+              bookingCount: 1,
+            },
+          },
+        );
+
+        return res.status(201).json({
+          success: true,
+          message: "Room booked successfully",
+          data: result,
+        });
+      } catch (error) {
+        return res.status(500).json({
+          success: false,
+          message: error.message,
+        });
+      }
+    });
+
     // await client.db("admin").command({ ping: 1 });
     console.log("Connected to MongoDB!");
   } finally {
