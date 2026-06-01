@@ -253,6 +253,49 @@ async function run() {
       }
     });
 
+    // delete room
+
+    app.delete("/rooms/:id", verifyToken, async (req, res) => {
+      try {
+        const id = req.params.id;
+
+        const room = await roomsCollection.findOne({
+          _id: new ObjectId(id),
+        });
+
+        if (!room) {
+          return res.status(404).json({
+            success: false,
+            message: "Room not found",
+          });
+        }
+        if (room.userId !== req.user.id) {
+          return res.status(403).json({
+            success: false,
+            message: "Forbidden access",
+          });
+        }
+        await bookingCollection.deleteMany({
+          roomId: id,
+        });
+
+        const result = await roomsCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: "Room deleted successfully",
+          data: result,
+        });
+      } catch (error) {
+        return res.status(500).json({
+          success: false,
+          message: "Internal Server Error",
+        });
+      }
+    });
+
     // await client.db("admin").command({ ping: 1 });
     console.log("Connected to MongoDB!");
   } finally {
