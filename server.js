@@ -411,6 +411,31 @@ async function run() {
       }
     });
 
+    // my bookings
+
+    app.get("/my-bookings", verifyToken, async (req, res) => {
+      try {
+        const id = req.user.id;
+
+        const result = await bookingCollection
+          .find({
+            bookedBy: id,
+          })
+          .toArray();
+
+        return res.status(200).json({
+          success: true,
+          message: "Bookings fetched successfully",
+          data: result,
+        });
+      } catch (error) {
+        return res.status(500).json({
+          success: false,
+          message: "Internal Server Error",
+        });
+      }
+    });
+
     // await client.db("admin").command({ ping: 1 });
     console.log("Connected to MongoDB!");
   } finally {
