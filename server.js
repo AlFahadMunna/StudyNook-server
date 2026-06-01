@@ -82,6 +82,71 @@ async function run() {
       }
     });
 
+    // get all rooms
+
+    app.get("/rooms", async (req, res) => {
+      try {
+        const search = req.query.search?.trim();
+
+        const amenities = req.query.amenities?.trim();
+
+        const minRate = req.query.min?.trim();
+
+        const maxRate = req.query.max?.trim();
+
+        let queryRoom = {};
+
+        // search
+
+        if (search) {
+          queryRoom.roomName = {
+            $regex: search,
+            $options: "i",
+          };
+        }
+
+        // amenities filter
+
+        if (amenities) {
+          const amenitiesArray = amenities.split(",").map((a) => a.trim());
+
+          queryRoom.amenities = {
+            $in: amenitiesArray,
+          };
+        }
+
+        // min max filter
+
+        if (minRate || maxRate) {
+          queryRoom.hourlyRate = {};
+
+          if (minRate) {
+            queryRoom.hourlyRate.$gte = Number(minRate);
+          }
+
+          if (maxRate) {
+            queryRoom.hourlyRate.$lte = Number(maxRate);
+          }
+        }
+
+        const result = await roomsCollection
+          .find(queryRoom)
+          .sort({ createdAt: -1 })
+          .toArray();
+
+        return res.status(200).json({
+          success: true,
+          message: "Rooms fetched successfully",
+          data: result,
+        });
+      } catch (error) {
+        return res.status(500).json({
+          success: false,
+          message: "Internal Server Error",
+        });
+      }
+    });
+
     // await client.db("admin").command({ ping: 1 });
     console.log("Connected to MongoDB!");
   } finally {
