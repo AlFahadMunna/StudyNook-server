@@ -436,6 +436,82 @@ async function run() {
       }
     });
 
+    // cancel booking
+
+    app.patch("/book-room/:id/cancel", verifyToken, async (req, res) => {
+      try {
+        const id = req.params.id;
+
+        const body = req.body;
+
+        const booking = await bookingCollection.findOne({
+          _id: new ObjectId(id),
+        });
+
+        if (!booking) {
+          return res.status(404).json({
+            success: false,
+            message: "Booking not found",
+          });
+        }
+
+        if (booking.bookedBy !== req.user.id) {
+          return res.status(403).json({
+            success: false,
+            message: "Forbidden access",
+          });
+        }
+
+        const result = await bookingCollection.updateOne(
+          {
+            _id: new ObjectId(id),
+          },
+          {
+            $set: {
+              status: "cancelled",
+            },
+          },
+        );
+
+        // remove booking id
+
+        await userCollection.updateOne(
+          {
+            _id: new ObjectId(body.bookedBy),
+          },
+          {
+            $pull: {
+              bookings: new ObjectId(id),
+            },
+          },
+        );
+
+        // decrease booking count
+
+        await roomsCollection.updateOne(
+          {
+            _id: new ObjectId(body.roomId),
+          },
+          {
+            $inc: {
+              bookingCount: -1,
+            },
+          },
+        );
+
+        return res.status(200).json({
+          success: true,
+          message: "Booking cancelled successfully",
+          data: result,
+        });
+      } catch (error) {
+        return res.status(500).json({
+          success: false,
+          message: "Internal Server Error",
+        });
+      }
+    });
+
     // await client.db("admin").command({ ping: 1 });
     console.log("Connected to MongoDB!");
   } finally {
