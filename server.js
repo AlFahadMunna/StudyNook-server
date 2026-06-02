@@ -21,6 +21,10 @@ const client = new MongoClient(uri, {
   },
 });
 
+const JWKS = createRemoteJWKSet(
+  new URL(`${"https://study-nook-bd.vercel.app"}/api/auth/jwks`),
+);
+
 const verifyToken = async (req, res, next) => {
   const authHeader = req?.headers?.authorization;
   if (!authHeader) {
